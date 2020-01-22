@@ -43,7 +43,7 @@ You're reading it!
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The code for this step is contained in the first code cell of the IPython notebook located in "./P2.ipynb" in Section 5th code cell of the IPython notebook.  
 
 I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
@@ -55,60 +55,79 @@ I then used the output `objpoints` and `imgpoints` to compute the camera calibra
 
 #### 1. Provide an example of a distortion-corrected image.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
+To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one also images are embedded in the HTML of the project:
 ![alt text][image2]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps "./P2.ipynb" (in Section 5 in the HTML).  Here's an example of my output for this step. 
 
-![alt text][image3]
+The images are in this path .output_images\gradient\
+
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `GetBirdEyeView()`, which appears in Section 8th code cell of the IPython notebook `p2.py` (output_images/examples/example.py).  The `GetBirdEyeView()` function takes as inputs an image (`gradient_binary_image`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+    # This should be chosen to present the result at the proper aspect ratio
+    # My choice of 100 pixels is not exact, but close enough for our purpose here
+    # offset for dst points
+    offset = 100
+    
+    src = np.float32([[w, h-10],    # br
+                      [0, h-10],    # bl
+                      [(w/2) - offset, (h/2) + offset],   # tl
+                      [(w/2) + offset, (h/2) + offset] ])  # tr
+    
+    dst = np.float32([[w, h],       # br
+                      [0, h],       # bl
+                      [0, 0],       # tl
+                      [w, 0] ])      # tr
+
+    M = cv2.getPerspectiveTransform(src, dst)
+    Minv = cv2.getPerspectiveTransform(dst,src)
+    
 ```
 
-This resulted in the following source and destination points:
 
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+I verified that my bird view was working as expected .
 
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
-
-![alt text][image4]
+"./output_images/bird_eye_output"
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
 Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
 
-![alt text][image5]
+def fitCurvatureUsingSlidingWindow(binary_warped_image,nwindows,margin,minpix):
+    
+    # Find our lane pixels first
+    leftx, lefty, rightx, righty, out_img = findLanesPixels(binary_warped_image,nwindows,margin,minpix)
+
+    # Fit a second order polynomial to each using `np.polyfit`
+    left_fit,right_fit,left_fitx, right_fitx, ploty = fitPolynomial(binary_warped_image.shape, leftx, lefty, rightx, righty)
+
+    ## Visualization ##
+    # Colors in the left and right lane regions
+    out_img[lefty, leftx] = [255, 0, 0]
+    out_img[righty, rightx] = [0, 0, 255]
+        
+        
+    return left_fit,right_fit,ploty,left_fitx,right_fitx,out_img
+    
+
+
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I did this in Section 11th code cell of the IPython notebook `p2.py`
+Function name measureCurvatureReal(ploty, left_fit_cr, right_fit_cr):
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in 10th code cell of the IPython notebook `p2.py`in the function `insertLanesAreaonImage()`.  Here is an example of my result on a test image:
 
-![alt text][image6]
+"./output_images/final_image"
 
 ---
 
@@ -116,7 +135,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./test_videos_output/project_video.mp4)
 
 ---
 
@@ -124,4 +143,10 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The pipeline relies on a restricted region of interest based on several iteration.
+
+I belive the algorithm won't work as expected 
+ 1-if the road was going sharp up , sharp down Sharp left , or sharp right Like the hard challenge video.
+ 2-Too many changes in light in very short time , Algorithm can't detect the lanes correctly espiceially the lanes are not drawn in some frame images.
+ 3-The road has many colors in the same lane (Dark gray and light gray) as it give fake lane lines and the algorithm can't differntiate between the fake lanes and the real lanes
+ 4-I think the pipeline will perfom badly on darker , foggy road , sharp turns , tunnels or under bridges
